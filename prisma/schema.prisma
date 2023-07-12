@@ -1,0 +1,1430 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model affiliates {
+  id             Int       @id @default(autoincrement())
+  affiliate_name String    @db.VarChar(70)
+  user_id        Int
+  created_at     DateTime? @db.Timestamp(0)
+  updated_at     DateTime? @db.Timestamp(0)
+  users          users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "affiliates_user_id_foreign")
+
+  @@index([user_id], map: "fk_index_affiliate_user_id")
+}
+
+model chat_blocked_channels {
+  id              BigInt        @id @default(autoincrement())
+  user_id         Int?
+  chat_uuid_id    BigInt         // Corrected type to BigInt
+  chat_channel_id BigInt
+  channel_type    Int           @db.SmallInt
+  created_at      DateTime?     @db.Timestamp(0)
+  updated_at      DateTime?     @db.Timestamp(0)
+  chat_channels   chat_channels @relation(fields: [chat_channel_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "chat_blocked_channels_chat_channel_id_foreign")
+  
+  chat_uuids      chat_uuids    @relation(fields: [chat_uuid_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "chat_blocked_channels_chat_uuid_id_foreign")
+  users           users?        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "chat_blocked_channels_user_id_foreign")
+
+  @@index([chat_channel_id], map: "fk_index_chat_blocked_channels_chat_channel_id")
+  @@index([chat_uuid_id], map: "fk_index_chat_blocked_channels_chat_uuid_id")
+  @@index([user_id], map: "fk_index_chat_blocked_channels_user_id")
+}
+
+
+
+model chat_channels {
+  id                    BigInt                  @id @default(autoincrement())
+  channel_id            String                  @unique(map: "chat_channels_channel_id_unique") @db.VarChar(50)
+  channel_type          Int                     @db.SmallInt
+  channel_name          String?                 @default("") @db.VarChar(20)
+  description           String?                 @default("") @db.VarChar(30)
+  status                Int                     @db.SmallInt
+  group_id              Int?
+  user_id               Int
+  created_at            DateTime?               @db.Timestamp(0)
+  updated_at            DateTime?               @db.Timestamp(0)
+  chat_blocked_channels chat_blocked_channels[]
+  groups                groups?                 @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "chat_channels_group_id_foreign")
+  users                 users                   @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "chat_channels_user_id_foreign")
+  statistics            statistics[]
+
+  @@index([group_id], map: "fk_index_chat_channels_group_id")
+  @@index([user_id], map: "fk_index_chat_channels_user_id")
+}
+
+model chat_messages {
+  id                                      BigInt     @id @default(autoincrement())
+  chat_messages                           String
+  message_type                            Int        @db.SmallInt
+  message_from                            Int?
+  message_to                              Int?
+  statistics_id                           Int
+  created_at                              DateTime?  @db.Timestamp(0)
+  updated_at                              DateTime?  @db.Timestamp(0)
+  users_chat_messages_message_fromTousers users?     @relation("chat_messages_message_fromTousers", fields: [message_from], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "chat_messages_message_from_foreign")
+  users_chat_messages_message_toTousers   users?     @relation("chat_messages_message_toTousers", fields: [message_to], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "chat_messages_message_to_foreign")
+  statistics                              statistics @relation(fields: [statistics_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "chat_messages_statistics_id_foreign")
+
+  @@index([statistics_id], map: "fk_index_chat_chat_messages_statistics_id")
+  @@index([message_from], map: "fk_index_chat_messages_message_from")
+  @@index([message_to], map: "fk_index_chat_messages_message_to")
+}
+
+model chat_uuids {
+  id                    BigInt                  @id @default(autoincrement())
+  chat_uuid             String                  @unique(map: "chat_uuids_chat_uuid_unique") @db.VarChar(36)
+  auth_key              String                  @unique(map: "chat_uuids_auth_key_unique") @db.VarChar(8)
+  status                Int                     @db.SmallInt
+  user_id               Int?
+  created_at            DateTime?               @db.Timestamp(0)
+  updated_at            DateTime?               @db.Timestamp(0)
+  chat_blocked_channels chat_blocked_channels[]
+  users                 users?                  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "chat_uuids_user_id_foreign")
+
+  @@index([user_id], map: "fk_index_chat_uuids_user_id")
+}
+
+model consultant_agendas {
+  id            BigInt      @id @default(autoincrement())
+  consultant_id Int
+  group_id      Int
+  agenda_type   String      @db.VarChar(20)
+  mode          String      @db.VarChar(20)
+  option        String      @db.VarChar(20)
+  criteria      Int
+  date          DateTime?   @db.Date
+  week_number   Int
+  time_from     DateTime?   @db.Time(0)
+  time_to       DateTime    @db.Time(6)
+  time_zone     String?     @db.VarChar(255)
+  created_at    DateTime?   @db.Timestamp(0)
+  updated_at    DateTime?   @db.Timestamp(0)
+  consultants   consultants @relation(fields: [consultant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultant_agendas_consultant_id_foreign")
+  groups        groups      @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultant_agendas_group_id_foreign")
+
+  @@index([consultant_id], map: "fk_index_consultant_agendas_consultant_id")
+  @@index([group_id], map: "fk_index_consultant_agendas_group_id")
+}
+
+model consultant_call_rates {
+  id                    Int         @id @default(autoincrement())
+  min_rate              Decimal     @default(0) @db.Decimal(4, 2)
+  max_rate              Decimal     @default(0) @db.Decimal(4, 2)
+  call_rate             Decimal     @default(0) @db.Decimal(4, 2)
+  commission_percentage Decimal     @default(0) @db.Decimal(5, 2)
+  consultant_id         Int
+  created_at            DateTime?   @db.Timestamp(0)
+  updated_at            DateTime?   @db.Timestamp(0)
+  consultants           consultants @relation(fields: [consultant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultant_call_rates_consultant_id_foreign")
+
+  @@index([consultant_id], map: "fk_index_consultant_call_rates_consultant_id")
+}
+
+model consultant_gallery {
+  id            Int         @id @default(autoincrement())
+  consultant_id Int
+  user_id       Int
+  image_name    String      @db.VarChar(255)
+  is_approved   Boolean     @default(false)
+  created_at    DateTime?   @db.Timestamp(0)
+  updated_at    DateTime?   @db.Timestamp(0)
+  consultants   consultants @relation(fields: [consultant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultant_gallery_consultant_id_foreign")
+  users         users       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultant_gallery_user_id_foreign")
+
+  @@index([consultant_id], map: "fk_index_consultant_gallery_consultant_id")
+  @@index([user_id], map: "fk_index_consultant_gallery_user_id")
+}
+
+model consultant_ivr_numbers {
+  id                 Int              @id @default(autoincrement())
+  consultant_id      Int
+  country_id         Int
+  group_id           Int
+  site_ivr_number_id Int
+  created_at         DateTime?        @db.Timestamp(0)
+  updated_at         DateTime?        @db.Timestamp(0)
+  consultants        consultants      @relation(fields: [consultant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultant_ivr_numbers_consultant_id_foreign")
+  countries          countries        @relation(fields: [country_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultant_ivr_numbers_country_id_foreign")
+  groups             groups           @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultant_ivr_numbers_group_id_foreign")
+  site_ivr_numbers   site_ivr_numbers @relation(fields: [site_ivr_number_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultant_ivr_numbers_site_ivr_number_id_foreign")
+
+  @@unique([consultant_id, country_id, group_id, site_ivr_number_id], map: "consultant_ivr_numbers_consultant_id_country_id_group_id_site_i")
+  @@index([consultant_id], map: "fk_index_consultant_ivr_numbers_consultant_id")
+  @@index([country_id], map: "fk_index_consultant_ivr_numbers_country_id")
+  @@index([group_id], map: "fk_index_consultant_ivr_numbers_group_id")
+  @@index([site_ivr_number_id], map: "fk_index_consultant_ivr_numbers_site_ivr_number_id")
+}
+
+model consultant_messages {
+  id              Int         @id @default(autoincrement())
+  message_subject String      @db.VarChar(100)
+  message_body    String      @db.VarChar(500)
+  parent_id       Int         @default(0)
+  mark_as_read    Boolean     @default(false)
+  consultant_id   Int
+  created_at      DateTime?   @db.Timestamp(0)
+  updated_at      DateTime?   @db.Timestamp(0)
+  consultants     consultants @relation(fields: [consultant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultant_messages_consultant_id_foreign")
+
+  @@index([consultant_id], map: "fk_index_consultant_messages_consultant_id")
+}
+
+model consultant_online_durations {
+  id            Int         @id @default(autoincrement())
+  consultant_id Int
+  online_time   DateTime    @db.Timestamp(0)
+  offline_time  DateTime?   @db.Timestamp(0)
+  created_at    DateTime?   @db.Timestamp(0)
+  updated_at    DateTime?   @db.Timestamp(0)
+  consultants   consultants @relation(fields: [consultant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultant_online_durations_consultant_id_foreign")
+
+  @@index([consultant_id], map: "fk_index_consultant_online_durations_consultant_id")
+}
+
+model consultant_out_payments {
+  id                   Int         @id @default(autoincrement())
+  period               String      @db.VarChar(10)
+  paid_amount          Decimal     @db.Decimal(9, 5)
+  consultant_id        Int
+  is_invoice_generated Boolean     @default(false)
+  payment_status       Boolean     @default(false)
+  created_at           DateTime?   @db.Timestamp(0)
+  updated_at           DateTime?   @db.Timestamp(0)
+  bonus_amount         Decimal     @default(0) @db.Decimal(9, 5)
+  consultants          consultants @relation(fields: [consultant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultant_out_payments_consultant_id_foreign")
+
+  @@index([consultant_id], map: "fk_index_consultant_out_payments_consultant_id")
+}
+
+model consultant_part_payments {
+  id             Int         @id @default(autoincrement())
+  period         String      @db.VarChar(10)
+  consultant_id  Int
+  amount         Decimal     @db.Decimal(9, 5)
+  payment_status Boolean     @default(false)
+  created_at     DateTime?   @db.Timestamp(0)
+  updated_at     DateTime?   @db.Timestamp(0)
+  consultants    consultants @relation(fields: [consultant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultant_part_payments_consultant_id_foreign")
+
+  @@index([consultant_id], map: "fk_index_consultant_part_payments_consultant_id")
+}
+
+model consultant_phone_numbers {
+  id               Int         @id @default(autoincrement())
+  phone_number     String      @db.VarChar(20)
+  idd_code         String      @db.VarChar(5)
+  type             String      @db.VarChar(10)
+  surcharge_amount Decimal     @default(0) @db.Decimal(8, 4)
+  consultant_id    Int
+  is_active        Boolean     @default(true)
+  created_at       DateTime?   @db.Timestamp(0)
+  updated_at       DateTime?   @db.Timestamp(0)
+  consultants      consultants @relation(fields: [consultant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultant_phone_numbers_consultant_id_foreign")
+
+  @@index([consultant_id], map: "fk_index_consultant_phone_number_consultant_id")
+}
+
+model consultant_prs_numbers {
+  id                 Int              @id @default(autoincrement())
+  consultant_id      Int
+  country_id         Int
+  group_id           Int
+  site_ivr_number_id Int
+  created_at         DateTime?        @db.Timestamp(0)
+  updated_at         DateTime?        @db.Timestamp(0)
+  consultants        consultants      @relation(fields: [consultant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultant_prs_numbers_consultant_id_foreign")
+  countries          countries        @relation(fields: [country_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultant_prs_numbers_country_id_foreign")
+  groups             groups           @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultant_prs_numbers_group_id_foreign")
+  site_ivr_numbers   site_ivr_numbers @relation(fields: [site_ivr_number_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultant_prs_numbers_site_ivr_number_id_foreign")
+
+  @@unique([consultant_id, country_id, group_id, site_ivr_number_id], map: "consultant_prs_numbers_consultant_id_country_id_group_id_site_i")
+  @@index([consultant_id], map: "fk_index_consultant_prs_numbers_consultant_id")
+  @@index([country_id], map: "fk_index_consultant_prs_numbers_country_id")
+  @@index([group_id], map: "fk_index_consultant_prs_numbers_group_id")
+  @@index([site_ivr_number_id], map: "fk_index_consultant_prs_numbers_site_ivr_number_id")
+}
+
+model consultant_specializations {
+  id                Int             @id @default(autoincrement())
+  specialization_id Int
+  consultant_id     Int
+  created_at        DateTime?       @db.Timestamp(0)
+  updated_at        DateTime?       @db.Timestamp(0)
+  consultants       consultants     @relation(fields: [consultant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultant_specializations_consultant_id_foreign")
+  specializations   specializations @relation(fields: [specialization_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultant_specializations_specialization_id_foreign")
+
+  @@index([consultant_id], map: "fk_index_consultant_specializations_consultant_id")
+  @@index([specialization_id], map: "fk_index_consultant_specializations_specialization_id")
+}
+
+model consultant_statistics {
+  id                  Int         @id @default(autoincrement())
+  consultant_id       Int
+  group_id            Int
+  no_of_consultations Int         @default(0)
+  review_score        Int         @default(0)
+  no_of_reviews       Int         @default(0)
+  no_of_favorites     Int         @default(0)
+  total_call_duration Int         @default(0)
+  created_at          DateTime?   @db.Timestamp(0)
+  updated_at          DateTime?   @db.Timestamp(0)
+  consultants         consultants @relation(fields: [consultant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultant_statistics_consultant_id_foreign")
+  groups              groups      @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultant_statistics_group_id_foreign")
+
+  @@unique([consultant_id, group_id], map: "consultant_statistics_consultant_id_group_id_unique")
+  @@index([consultant_id], map: "fk_index_consultant_statistics_consultant_id")
+  @@index([group_id], map: "fk_index_consultant_statistics_group_id")
+}
+
+model consultant_tips {
+  id                Int               @id @default(autoincrement())
+  consultant_id     Int
+  customer_id       Int
+  statistics_id     Int
+  tipping_method    String            @db.VarChar(5)
+  tip_amount        Decimal           @db.Decimal(5, 2)
+  vat_rate          Decimal           @db.Decimal(5, 2)
+  vat_amount        Decimal           @db.Decimal(5, 2)
+  coach_get_amount  Decimal           @db.Decimal(5, 2)
+  exchange_rate     Decimal           @db.Decimal(5, 2)
+  customer_currency String            @db.VarChar(3)
+  coach_currency    String            @db.VarChar(3)
+  created_at        DateTime?         @db.Timestamp(0)
+  updated_at        DateTime?         @db.Timestamp(0)
+  consultants       consultants       @relation(fields: [consultant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultant_tips_consultant_id_foreign")
+  credits_customers credits_customers @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultant_tips_customer_id_foreign")
+  statistics        statistics        @relation(fields: [statistics_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultant_tips_statistics_id_foreign")
+
+  @@index([consultant_id], map: "fk_index_consultant_tips_consultant_id")
+  @@index([customer_id], map: "fk_index_consultant_tips_customer_id")
+  @@index([statistics_id], map: "fk_index_consultant_tips_statistics_id")
+}
+
+model consultants {
+  id                              Int                               @id @default(autoincrement())
+  po_box_number                   String?                           @db.VarChar(30)
+  street                          String?                           @db.VarChar(50)
+  city                            String?                           @db.VarChar(50)
+  zip_code                        String?                           @db.VarChar(10)
+  birthday                        DateTime?                         @db.Date
+  gender                          String?                           @db.VarChar(25)
+  contact_number_fixed            String?                           @db.VarChar(20)
+  contact_number_mobile           String?                           @db.VarChar(20)
+  company_name                    String?                           @db.VarChar(100)
+  vat_number                      String?                           @db.VarChar(15)
+  vat_amount                      Float?
+  vat_obligated                   Int                               @default(1) @db.SmallInt
+  ivr_status                      Int                               @default(3) @db.SmallInt
+  chat_status                     Int                               @default(3) @db.SmallInt
+  is_blocked                      Boolean                           @default(false)
+  is_deleted                      Boolean                           @default(false)
+  is_chat_enabled                 Boolean                           @default(false)
+  agenda                          Int                               @default(0) @db.SmallInt
+  user_id                         Int
+  country_id                      Int
+  currency_code                   String                            @db.VarChar(3)
+  call_rates_enabled              Boolean                           @default(false)
+  min_rate                        Decimal                           @default(0) @db.Decimal(4, 2)
+  max_rate                        Decimal                           @default(0) @db.Decimal(4, 2)
+  call_rate                       Decimal                           @default(0) @db.Decimal(4, 2)
+  chat_rate                       Decimal                           @default(0) @db.Decimal(4, 2)
+  commission_percentage           Decimal                           @default(0) @db.Decimal(5, 2)
+  credit_code                     String                            @db.VarChar(8)
+  provider_sequence               String?                           @db.VarChar(10)
+  last_login                      DateTime?                         @db.Timestamp(0)
+  ivr_status_logout_option        Int                               @default(1)
+  chat_status_logout_option       Boolean                           @default(false)
+  created_at                      DateTime?                         @db.Timestamp(0)
+  updated_at                      DateTime?                         @db.Timestamp(0)
+  is_activation_mail_sent         Boolean?                          @default(false)
+  consultant_agendas              consultant_agendas[]
+  consultant_call_rates           consultant_call_rates[]
+  consultant_gallery              consultant_gallery[]
+  consultant_ivr_numbers          consultant_ivr_numbers[]
+  consultant_messages             consultant_messages[]
+  consultant_online_durations     consultant_online_durations[]
+  consultant_out_payments         consultant_out_payments[]
+  consultant_part_payments        consultant_part_payments[]
+  consultant_phone_numbers        consultant_phone_numbers[]
+  consultant_prs_numbers          consultant_prs_numbers[]
+  consultant_specializations      consultant_specializations[]
+  consultant_statistics           consultant_statistics[]
+  consultant_tips                 consultant_tips[]
+  countries                       countries                         @relation(fields: [country_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultants_country_id_foreign")
+  users                           users                             @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultants_user_id_foreign")
+  consultants_custom_details      consultants_custom_details[]
+  consultants_extension_details   consultants_extension_details[]
+  consultants_languages           consultants_languages[]
+  credits_customer_reviews        credits_customer_reviews[]
+  credits_customer_viewed_coaches credits_customer_viewed_coaches[]
+  favorite_consultants            favorite_consultants[]
+  photo_consults                  photo_consults[]
+  statistics                      statistics[]
+
+  @@index([country_id], map: "fk_index_consultant_country_id")
+  @@index([user_id], map: "fk_index_consultant_user_id")
+}
+
+model consultants_custom_details {
+  id            Int         @id @default(autoincrement())
+  extension     Int
+  nickname      String      @db.VarChar(20)
+  avatar        String?     @db.VarChar(20)
+  photo_consult Int         @default(0) @db.SmallInt
+  intro_audio   String?     @db.VarChar(20)
+  intro_video   String?     @db.VarChar(20)
+  consultant_id Int
+  created_at    DateTime?   @db.Timestamp(0)
+  updated_at    DateTime?   @db.Timestamp(0)
+  consultants   consultants @relation(fields: [consultant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultants_custom_details_consultant_id_foreign")
+
+  @@index([consultant_id], map: "fk_index_consultants_custom_detail_consultant_id")
+}
+
+model consultants_extension_details {
+  id            Int         @id @default(autoincrement())
+  extension     Int         @default(0)
+  nickname      String      @db.VarChar(20)
+  avatar        String?     @db.VarChar(20)
+  photo_consult Int         @default(0) @db.SmallInt
+  intro_audio   String?     @db.VarChar(20)
+  intro_video   String?     @db.VarChar(20)
+  info_short    Json?       @db.Json
+  info_long     Json?       @db.Json
+  consultant_id Int
+  group_id      Int
+  created_at    DateTime?   @db.Timestamp(0)
+  updated_at    DateTime?   @db.Timestamp(0)
+  consultants   consultants @relation(fields: [consultant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultants_extension_details_consultant_id_foreign")
+  groups        groups      @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultants_extension_details_group_id_foreign")
+
+  @@index([consultant_id], map: "fk_index_consultants_extension_detail_consultant_id")
+  @@index([group_id], map: "fk_index_consultants_extension_detail_group_id")
+}
+
+model consultants_languages {
+  id            Int         @id @default(autoincrement())
+  consultant_id Int
+  language_id   Int
+  created_at    DateTime?   @db.Timestamp(0)
+  updated_at    DateTime?   @db.Timestamp(0)
+  consultants   consultants @relation(fields: [consultant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultants_languages_consultant_id_foreign")
+  languages     languages   @relation(fields: [language_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "consultants_languages_language_id_foreign")
+
+  @@index([consultant_id], map: "fk_index_consultants_language_consultant_id")
+  @@index([language_id], map: "fk_index_consultants_language_language_id")
+}
+
+model contact_us_messages {
+  id           Int       @id @default(autoincrement())
+  name         String    @db.VarChar(35)
+  parent_id    Int       @default(0)
+  email        String    @db.VarChar(254)
+  message      String    @db.VarChar(500)
+  ip           String    @db.VarChar(50)
+  mark_as_read Boolean   @default(false)
+  group_id     Int
+  country_id   Int
+  created_at   DateTime? @db.Timestamp(0)
+  updated_at   DateTime? @db.Timestamp(0)
+  countries    countries @relation(fields: [country_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "contact_us_messages_country_id_foreign")
+  groups       groups    @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "contact_us_messages_group_id_foreign")
+
+  @@index([country_id], map: "fk_index_contact_us_messages_country_id")
+  @@index([group_id], map: "fk_index_contact_us_messages_group_id")
+}
+
+model countries {
+  id                          Int                           @id @default(autoincrement())
+  name                        String                        @db.VarChar(50)
+  code                        String                        @db.VarChar(5)
+  idd_code                    String                        @db.VarChar(5)
+  currency_code               String                        @db.VarChar(5)
+  vat_rate                    Decimal                       @db.Decimal(5, 2)
+  effective_vat_rate          Decimal                       @db.Decimal(5, 2)
+  direct_number_enabled       Int                           @default(0) @db.SmallInt
+  created_at                  DateTime?                     @db.Timestamp(0)
+  updated_at                  DateTime?                     @db.Timestamp(0)
+  consultant_ivr_numbers      consultant_ivr_numbers[]
+  consultant_prs_numbers      consultant_prs_numbers[]
+  consultants                 consultants[]
+  contact_us_messages         contact_us_messages[]
+  country_vat_rates           country_vat_rates[]
+  credits_customers           credits_customers[]
+  credits_refund_bank_details credits_refund_bank_details[]
+  group_ivr_numbers           group_ivr_numbers[]
+  site_ivr_numbers            site_ivr_numbers[]
+  subscribers                 subscribers[]
+  subscribers_pre_release     subscribers_pre_release[]
+  user_bank_accounts          user_bank_accounts[]
+}
+
+model country_vat_rates {
+  id         Int       @id @default(autoincrement())
+  vat_rate   Decimal   @db.Decimal(5, 2)
+  country_id Int
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+  countries  countries @relation(fields: [country_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "country_vat_rates_country_id_foreign")
+
+  @@index([country_id], map: "fk_index_country_vat_rates_country_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model credits_customer_reviews {
+  id                                                    Int               @id @default(autoincrement())
+  type                                                  String            @db.VarChar(255)
+  comment                                               String?           @db.VarChar(500)
+  rating                                                Int
+  parent_id                                             Int
+  is_flagged                                            Boolean           @default(false)
+  is_visible                                            Boolean           @default(true)
+  is_deleted                                            Boolean           @default(false)
+  statistics_id                                         Int
+  consultant_id                                         Int
+  credit_customer_id                                    Int
+  created_user_id                                       Int
+  group_id                                              Int
+  flagged_user_id                                       Int?
+  created_at                                            DateTime?         @db.Timestamp(0)
+  updated_at                                            DateTime?         @db.Timestamp(0)
+  consultants                                           consultants       @relation(fields: [consultant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "credits_customer_reviews_consultant_id_foreign")
+  users_credits_customer_reviews_created_user_idTousers users             @relation("credits_customer_reviews_created_user_idTousers", fields: [created_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "credits_customer_reviews_created_user_id_foreign")
+  credits_customers                                     credits_customers @relation(fields: [credit_customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "credits_customer_reviews_credit_customer_id_foreign")
+  users_credits_customer_reviews_flagged_user_idTousers users?            @relation("credits_customer_reviews_flagged_user_idTousers", fields: [flagged_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "credits_customer_reviews_flagged_user_id_foreign")
+  groups                                                groups            @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "credits_customer_reviews_group_id_foreign")
+  statistics                                            statistics        @relation(fields: [statistics_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "credits_customer_reviews_statistics_id_foreign")
+
+  @@index([consultant_id], map: "fk_index_consultant_credits_customer_reviews_consultant_id")
+  @@index([created_user_id], map: "fk_index_consultant_credits_customer_reviews_created_user_id")
+  @@index([credit_customer_id], map: "fk_index_consultant_credits_customer_reviews_credit_customer_id")
+  @@index([flagged_user_id], map: "fk_index_consultant_credits_customer_reviews_flagged_user_id")
+  @@index([group_id], map: "fk_index_consultant_credits_customer_reviews_group_id")
+  @@index([statistics_id], map: "fk_index_consultant_credits_customer_reviews_statistics_id")
+}
+
+model credits_customer_viewed_coaches {
+  id            BigInt      @id @default(autoincrement())
+  user_id       Int
+  consultant_id Int
+  group_id      Int
+  created_at    DateTime?   @db.Timestamp(0)
+  updated_at    DateTime?   @db.Timestamp(0)
+  consultants   consultants @relation(fields: [consultant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "credits_customer_viewed_coaches_consultant_id_foreign")
+  groups        groups      @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "credits_customer_viewed_coaches_group_id_foreign")
+  users         users       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "credits_customer_viewed_coaches_user_id_foreign")
+
+  @@index([consultant_id], map: "fk_index_credits_customer_viewed_coaches_consultant_id")
+  @@index([group_id], map: "fk_index_credits_customer_viewed_coaches_group_id")
+  @@index([user_id], map: "fk_index_credits_customer_viewed_coaches_user_id")
+}
+
+model credits_customers {
+  id                        Int                         @id @default(autoincrement())
+  pseudo_name               String                      @db.VarChar(35)
+  current_credits           Decimal                     @default(0) @db.Decimal(11, 5)
+  currency_code             String                      @db.VarChar(3)
+  credit_code               String                      @db.VarChar(20)
+  user_id                   Int
+  language_id               Int
+  group_id                  Int
+  country_id                Int
+  avatar                    String?                     @db.VarChar(15)
+  is_blocked                Boolean                     @default(false)
+  is_deleted                Boolean                     @default(false)
+  last_login                DateTime?                   @db.Timestamp(0)
+  created_at                DateTime?                   @db.Timestamp(0)
+  updated_at                DateTime?                   @db.Timestamp(0)
+  current_seconds           Int                         @default(0)
+  country_confirmed_at      DateTime?                   @db.Timestamp(0)
+  consultant_tips           consultant_tips[]
+  credits_customer_reviews  credits_customer_reviews[]
+  countries                 countries                   @relation(fields: [country_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "credits_customers_country_id_foreign")
+  groups                    groups                      @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "credits_customers_group_id_foreign")
+  languages                 languages                   @relation(fields: [language_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "credits_customers_language_id_foreign")
+  users                     users                       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "credits_customers_user_id_foreign")
+  deleted_customer_accounts deleted_customer_accounts[]
+  photo_consults            photo_consults[]
+  statistics                statistics[]
+  technical_issues          technical_issues[]
+
+  @@index([country_id], map: "fk_index_credit_customer_country_id")
+  @@index([group_id], map: "fk_index_credit_customer_group_id")
+  @@index([language_id], map: "fk_index_credit_customer_language_id")
+  @@index([user_id], map: "fk_index_credit_customer_user_id")
+}
+
+model credits_refund_bank_details {
+  id                     BigInt                   @id @default(autoincrement())
+  account_name           String                   @db.VarChar(60)
+  account_currency       String                   @db.VarChar(5)
+  bank_name              String                   @db.VarChar(45)
+  iban_number            String                   @db.VarChar(45)
+  swift_code             String                   @db.VarChar(15)
+  address                String                   @db.VarChar(70)
+  city                   String                   @db.VarChar(20)
+  zip_code               String                   @db.VarChar(15)
+  account_type           String                   @db.VarChar(8)
+  country_id             Int
+  created_at             DateTime?                @db.Timestamp(0)
+  updated_at             DateTime?                @db.Timestamp(0)
+  countries              countries                @relation(fields: [country_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "credits_refund_bank_details_country_id_foreign")
+  credits_refund_details credits_refund_details[]
+
+  @@index([country_id], map: "fk_index_credits_refund_bank_details_country_id")
+}
+
+model credits_refund_details {
+  id                           BigInt                      @id @default(autoincrement())
+  reason                       String                      @db.VarChar(250)
+  po_box_number                String                      @db.VarChar(20)
+  street                       String                      @db.VarChar(25)
+  city                         String                      @db.VarChar(25)
+  telephone_number             String                      @db.VarChar(15)
+  statistics_id                Int
+  credit_refund_bank_detail_id BigInt
+  created_at                   DateTime?                   @db.Timestamp(0)
+  updated_at                   DateTime?                   @db.Timestamp(0)
+  credits_refund_bank_details  credits_refund_bank_details @relation(fields: [credit_refund_bank_detail_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "credits_refund_details_credit_refund_bank_detail_id_foreign")
+  statistics                   statistics                  @relation(fields: [statistics_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "credits_refund_details_statistics_id_foreign")
+
+  @@index([credit_refund_bank_detail_id], map: "fk_index_credits_refund_bank_details_credit_refund_bank_detail_")
+  @@index([statistics_id], map: "fk_index_credits_refund_details_statistics_id")
+}
+
+model credits_transactions {
+  id                    Int       @id @default(autoincrement())
+  event_id              String
+  reference_id          String    @db.VarChar(30)
+  country_id            Int
+  amount                Decimal   @db.Decimal(8, 2)
+  currency_code         String    @db.VarChar(5)
+  payment_method        String    @db.VarChar(25)
+  payment_brand         String    @db.VarChar(25)
+  payment_gateway       String    @db.VarChar(25)
+  card_number_last_four String?   @db.VarChar(4)
+  status                String    @db.VarChar(10)
+  remark                String?   @db.VarChar(100)
+  user_id               Int
+  credit_type_id        Int
+  created_at            DateTime? @db.Timestamp(0)
+  updated_at            DateTime? @db.Timestamp(0)
+  group_id              Int?
+  plan_id               Int?
+  groups                groups?   @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "credits_transactions_group_id_foreign")
+  users                 users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "credits_transactions_user_id_foreign")
+
+  @@index([group_id], map: "fk_index_credits_transaction_group_id")
+  @@index([user_id], map: "fk_index_credits_transaction_user_id")
+}
+
+model currency_exchange_rates {
+  id         Int       @id @default(autoincrement())
+  eur        Json      @db.Json
+  chf        Json      @db.Json
+  cad        Json      @db.Json
+  usd        Json      @db.Json
+  gbp        Json      @db.Json
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+}
+
+model deleted_customer_accounts {
+  id                 Int               @id @default(autoincrement())
+  credit_customer_id Int
+  reason             Int
+  remark             String            @db.VarChar(250)
+  created_at         DateTime?         @db.Timestamp(0)
+  updated_at         DateTime?         @db.Timestamp(0)
+  credits_customers  credits_customers @relation(fields: [credit_customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "deleted_customer_accounts_credit_customer_id_foreign")
+
+  @@index([credit_customer_id], map: "fk_index_deleted_customer_accounts_credit_customer_id")
+}
+
+model divisions {
+  id             Int              @id @default(autoincrement())
+  name           String           @db.VarChar(50)
+  label          String           @db.VarChar(50)
+  parent_id      Int
+  created_at     DateTime?        @db.Timestamp(0)
+  updated_at     DateTime?        @db.Timestamp(0)
+  role_divisions role_divisions[]
+  user_divisions user_divisions[]
+
+  @@unique([name, parent_id], map: "divisions_name_parent_id_unique")
+}
+
+model favorite_consultants {
+  id            Int         @id @default(autoincrement())
+  user_id       Int
+  consultant_id Int
+  group_id      Int
+  created_at    DateTime?   @db.Timestamp(0)
+  updated_at    DateTime?   @db.Timestamp(0)
+  consultants   consultants @relation(fields: [consultant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "favorite_consultants_consultant_id_foreign")
+  groups        groups      @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "favorite_consultants_group_id_foreign")
+  users         users       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "favorite_consultants_user_id_foreign")
+
+  @@index([consultant_id], map: "fk_index_favorite_consultants_consultant_id")
+  @@index([group_id], map: "fk_index_favorite_consultants_group_id")
+  @@index([user_id], map: "fk_index_favorite_consultants_user_id")
+}
+
+model group_ivr_numbers {
+  id                 Int              @id @default(autoincrement())
+  country_id         Int
+  group_id           Int
+  site_ivr_number_id Int
+  created_at         DateTime?        @db.Timestamp(0)
+  updated_at         DateTime?        @db.Timestamp(0)
+  countries          countries        @relation(fields: [country_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "group_ivr_numbers_country_id_foreign")
+  groups             groups           @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "group_ivr_numbers_group_id_foreign")
+  site_ivr_numbers   site_ivr_numbers @relation(fields: [site_ivr_number_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "group_ivr_numbers_site_ivr_number_id_foreign")
+
+  @@unique([country_id, group_id, site_ivr_number_id], map: "group_ivr_numbers_country_id_group_id_site_ivr_number_id_unique")
+  @@index([country_id], map: "fk_index_group_ivr_numbers_country_id")
+  @@index([group_id], map: "fk_index_group_ivr_numbers_group_id")
+  @@index([site_ivr_number_id], map: "fk_index_group_ivr_numbers_site_ivr_number_id")
+}
+
+model groups {
+  id                              Int                               @id @default(autoincrement())
+  name                            String                            @unique(map: "groups_name_unique") @db.VarChar(20)
+  abbreviation                    String                            @unique(map: "groups_abbreviation_unique") @db.VarChar(5)
+  status                          Int                               @db.SmallInt
+  group_type_id                   Int
+  created_at                      DateTime?                         @db.Timestamp(0)
+  updated_at                      DateTime?                         @db.Timestamp(0)
+  chat_channels                   chat_channels[]
+  consultant_agendas              consultant_agendas[]
+  consultant_ivr_numbers          consultant_ivr_numbers[]
+  consultant_prs_numbers          consultant_prs_numbers[]
+  consultant_statistics           consultant_statistics[]
+  consultants_extension_details   consultants_extension_details[]
+  contact_us_messages             contact_us_messages[]
+  credits_customer_reviews        credits_customer_reviews[]
+  credits_customer_viewed_coaches credits_customer_viewed_coaches[]
+  credits_customers               credits_customers[]
+  credits_transactions            credits_transactions[]
+  favorite_consultants            favorite_consultants[]
+  group_ivr_numbers               group_ivr_numbers[]
+  horoscope_subscribers           horoscope_subscribers[]
+  media_storages                  media_storages[]
+  passwords_resets                passwords_resets[]
+  photo_consults                  photo_consults[]
+  promo_campaign_codes            promo_campaign_codes[]
+  site_ivr_numbers                site_ivr_numbers[]
+  statistics                      statistics[]
+  technical_issues                technical_issues[]
+  users                           users[]
+}
+
+model horoscope_daily {
+  id Int @id @default(autoincrement())
+}
+
+model horoscope_subscribers {
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(20)
+  email       String    @db.VarChar(50)
+  sign        Int       @db.SmallInt
+  time_period Int       @db.SmallInt
+  status      Int       @default(1) @db.SmallInt
+  created_at  DateTime? @db.Timestamp(0)
+  updated_at  DateTime? @db.Timestamp(0)
+  group_id    Int
+  groups      groups    @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "horoscope_subscribers_group_id_foreign")
+
+  @@index([group_id], map: "fk_index_horoscope_subscribers_group_id")
+}
+
+model ivr_call_statistics_hourly {
+  id                       Int      @id @default(autoincrement())
+  year                     String?  @db.VarChar(4)
+  month                    String?  @db.VarChar(2)
+  day                      String?  @db.VarChar(2)
+  hour                     String?  @db.VarChar(2)
+  call_status              String?  @db.VarChar(20)
+  call_status_count        Int
+  call_duration            Int?     @default(0)
+  conversation_duration    Int?     @default(0)
+  allocated_vat_amount     Decimal? @default(0) @db.Decimal(9, 5)
+  consultant_total_earning Decimal  @default(0) @db.Decimal(9, 5)
+  surcharge_amount         Decimal  @default(0) @db.Decimal(9, 5)
+  group_id_count           Int
+}
+
+model ivr_known_users {
+  id         Int       @id @default(autoincrement())
+  number     String    @db.VarChar(15)
+  user_id    Int
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+  group_id   Int?      @default(3)
+  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ivr_known_users_user_id_foreign")
+
+  @@index([user_id], map: "fk_index_ivr_known_users_user_id")
+}
+
+model languages {
+  id                    Int                     @id @default(autoincrement())
+  label                 String                  @db.VarChar(15)
+  key                   String                  @db.VarChar(5)
+  iso_id                String                  @db.VarChar(5)
+  created_at            DateTime?               @db.Timestamp(0)
+  updated_at            DateTime?               @db.Timestamp(0)
+  consultants_languages consultants_languages[]
+  credits_customers     credits_customers[]
+  site_ivr_numbers      site_ivr_numbers[]
+  user_campaigns        user_campaigns[]
+}
+
+model media_storages {
+  id                Int              @id @default(autoincrement())
+  type              String           @db.VarChar(10)
+  name              String           @db.VarChar(30)
+  extension         String           @db.VarChar(5)
+  web_location      String           @db.VarChar(50)
+  physical_location String           @db.VarChar(50)
+  uploaded_user_id  Int
+  group_id          Int
+  status            Int
+  created_at        DateTime?        @db.Timestamp(0)
+  updated_at        DateTime?        @db.Timestamp(0)
+  groups            groups           @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "media_storages_group_id_foreign")
+  users             users            @relation(fields: [uploaded_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "media_storages_uploaded_user_id_foreign")
+  photo_consults    photo_consults[]
+
+  @@index([group_id], map: "fk_index_media_storages_group_id")
+  @@index([uploaded_user_id], map: "fk_index_media_storages_uploaded_user_id")
+}
+
+model migrations {
+  id        Int    @id @default(autoincrement())
+  migration String @db.VarChar(255)
+  batch     Int
+}
+
+model notifications {
+  id                                     Int            @id @default(autoincrement())
+  category                               String         @db.VarChar(50)
+  src_user_id                            Int
+  src_user_role_id                       Int
+  dst_user_id                            Int?
+  reference                              String         @db.VarChar(50)
+  mark_as_read                           Boolean        @default(false)
+  created_at                             DateTime?      @db.Timestamp(0)
+  updated_at                             DateTime?      @db.Timestamp(0)
+  users_notifications_dst_user_idTousers users?         @relation("notifications_dst_user_idTousers", fields: [dst_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "notifications_dst_user_id_foreign")
+  users_notifications_src_user_idTousers users          @relation("notifications_src_user_idTousers", fields: [src_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "notifications_src_user_id_foreign")
+  role_divisions                         role_divisions @relation(fields: [src_user_role_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "notifications_src_user_role_id_foreign")
+
+  @@index([dst_user_id], map: "fk_index_notifications_dst_user_id")
+  @@index([src_user_id], map: "fk_index_notifications_src_user_id")
+  @@index([src_user_role_id], map: "fk_index_notifications_src_user_role_id")
+}
+
+model oauth_access_tokens {
+  id         String    @id @db.VarChar(100)
+  user_id    BigInt?
+  client_id  Int
+  name       String?   @db.VarChar(255)
+  scopes     String?
+  revoked    Boolean
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+  expires_at DateTime? @db.Timestamp(0)
+
+  @@index([user_id], map: "oauth_access_tokens_user_id_index")
+}
+
+model oauth_auth_codes {
+  id         String    @id @db.VarChar(100)
+  user_id    BigInt
+  client_id  Int
+  scopes     String?
+  revoked    Boolean
+  expires_at DateTime? @db.Timestamp(0)
+}
+
+model oauth_clients {
+  id                     Int       @id @default(autoincrement())
+  user_id                BigInt?
+  name                   String    @db.VarChar(255)
+  secret                 String    @db.VarChar(100)
+  redirect               String
+  personal_access_client Boolean
+  password_client        Boolean
+  revoked                Boolean
+  created_at             DateTime? @db.Timestamp(0)
+  updated_at             DateTime? @db.Timestamp(0)
+
+  @@index([user_id], map: "oauth_clients_user_id_index")
+}
+
+model oauth_personal_access_clients {
+  id         Int       @id @default(autoincrement())
+  client_id  Int
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+
+  @@index([client_id], map: "oauth_personal_access_clients_client_id_index")
+}
+
+model oauth_refresh_tokens {
+  id              String    @id @db.VarChar(100)
+  access_token_id String    @db.VarChar(100)
+  revoked         Boolean
+  expires_at      DateTime? @db.Timestamp(0)
+
+  @@index([access_token_id], map: "oauth_refresh_tokens_access_token_id_index")
+}
+
+model password_reveals {
+  id                                                  BigInt    @id @default(autoincrement())
+  account_owner_user_id                               Int
+  revealed_user_id                                    Int
+  revealed_count                                      Int
+  last_revealed_at                                    DateTime? @db.Timestamp(0)
+  created_at                                          DateTime? @db.Timestamp(0)
+  updated_at                                          DateTime? @db.Timestamp(0)
+  users_password_reveals_account_owner_user_idTousers users     @relation("password_reveals_account_owner_user_idTousers", fields: [account_owner_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "password_reveals_account_owner_user_id_foreign")
+  users_password_reveals_revealed_user_idTousers      users     @relation("password_reveals_revealed_user_idTousers", fields: [revealed_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "password_reveals_revealed_user_id_foreign")
+
+  @@index([account_owner_user_id], map: "fk_index_password_reveals_account_owner_user_id")
+  @@index([revealed_user_id], map: "fk_index_password_reveals_revealed_user_id")
+}
+
+model passwords_resets {
+  id         Int       @id @default(autoincrement())
+  email      String    @db.VarChar(254)
+  token      String    @db.VarChar(100)
+  user_id    Int
+  group_id   Int
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+  groups     groups    @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "passwords_resets_group_id_foreign")
+  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "passwords_resets_user_id_foreign")
+
+  @@index([group_id], map: "fk_index_password_reset_group_id")
+  @@index([user_id], map: "fk_index_password_reset_user_id")
+  @@index([email], map: "passwords_resets_email_index")
+}
+
+model permissions {
+  id                   Int                    @id @default(autoincrement())
+  name                 String                 @db.VarChar(10)
+  value                Int                    @db.SmallInt
+  created_at           DateTime?              @db.Timestamp(0)
+  updated_at           DateTime?              @db.Timestamp(0)
+  role_division_routes role_division_routes[]
+  user_routes          user_routes[]
+}
+
+model photo_consults {
+  id                Int               @id @default(autoincrement())
+  media_storage_id  Int
+  consultant_id     Int
+  customer_id       Int
+  group_id          Int
+  title             String            @db.VarChar(100)
+  note              String            @db.VarChar(800)
+  status            Int
+  created_at        DateTime?         @db.Timestamp(0)
+  updated_at        DateTime?         @db.Timestamp(0)
+  consultants       consultants       @relation(fields: [consultant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "photo_consults_consultant_id_foreign")
+  credits_customers credits_customers @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "photo_consults_customer_id_foreign")
+  groups            groups            @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "photo_consults_group_id_foreign")
+  media_storages    media_storages    @relation(fields: [media_storage_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "photo_consults_media_storage_id_foreign")
+
+  @@index([consultant_id], map: "fk_index_photo_consults_consultant_id")
+  @@index([customer_id], map: "fk_index_photo_consults_customer_id")
+  @@index([group_id], map: "fk_index_photo_consults_group_id")
+  @@index([media_storage_id], map: "fk_index_photo_consults_media_storage_id")
+}
+
+model promo_campaign_code_claims {
+  id                     Int                  @id @default(autoincrement())
+  ip                     String               @db.VarChar(40)
+  claimed_date           DateTime             @db.Timestamp(0)
+  source                 String               @db.VarChar(10)
+  claimed_amount         Decimal              @db.Decimal(5, 2)
+  promo_campaign_id      Int
+  promo_campaign_code_id Int
+  user_id                Int
+  created_at             DateTime?            @db.Timestamp(0)
+  updated_at             DateTime?            @db.Timestamp(0)
+  promo_campaign_codes   promo_campaign_codes @relation(fields: [promo_campaign_code_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "promo_campaign_code_claims_promo_campaign_code_id_foreign")
+  promo_campaigns        promo_campaigns      @relation(fields: [promo_campaign_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "promo_campaign_code_claims_promo_campaign_id_foreign")
+  users                  users                @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "promo_campaign_code_claims_user_id_foreign")
+
+  @@index([promo_campaign_code_id], map: "fk_index_promo_campaign_code_claims_promo_campaign_code_id")
+  @@index([promo_campaign_id], map: "fk_index_promo_campaign_code_claims_promo_campaign_id")
+  @@index([user_id], map: "fk_index_promo_campaign_code_claims_user_id")
+}
+
+model promo_campaign_codes {
+  id                          Int                          @id @default(autoincrement())
+  promo_campaign_code         String                       @unique(map: "promo_campaign_codes_promo_campaign_code_unique") @db.VarChar(8)
+  promo_campaign_code_type_id Int
+  promo_campaign_id           Int
+  group_id                    Int?
+  user_id                     Int?
+  is_active                   Boolean                      @default(true)
+  created_at                  DateTime?                    @db.Timestamp(0)
+  updated_at                  DateTime?                    @db.Timestamp(0)
+  usage                       Int                          @default(1)
+  promo_campaign_code_claims  promo_campaign_code_claims[]
+  groups                      groups?                      @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "promo_campaign_codes_group_id_foreign")
+  promo_campaigns             promo_campaigns              @relation(fields: [promo_campaign_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "promo_campaign_codes_promo_campaign_id_foreign")
+  users                       users?                       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "promo_campaign_codes_user_id_foreign")
+  promo_campaign_invitees     promo_campaign_invitees[]
+
+  @@index([group_id], map: "fk_index_promo_campaign_codes_group_id")
+  @@index([promo_campaign_id], map: "fk_index_promo_campaign_codes_promo_campaign_id")
+  @@index([user_id], map: "fk_index_promo_campaign_codes_user_id")
+}
+
+model promo_campaign_invitees {
+  id                     Int                  @id @default(autoincrement())
+  email                  String               @db.VarChar(254)
+  promo_campaign_code_id Int
+  status                 String               @db.VarChar(10)
+  approved_at            DateTime?            @db.Timestamp(0)
+  created_at             DateTime?            @db.Timestamp(0)
+  updated_at             DateTime?            @db.Timestamp(0)
+  promo_campaign_codes   promo_campaign_codes @relation(fields: [promo_campaign_code_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "promo_campaign_invitees_promo_campaign_code_id_foreign")
+
+  @@index([promo_campaign_code_id], map: "fk_index_promo_campaign_invitees_promo_campaign_code_id")
+}
+
+model promo_campaigns {
+  id                         Int                          @id @default(autoincrement())
+  campaign_name              String                       @unique(map: "promo_campaigns_campaign_name_unique") @db.VarChar(35)
+  campaign_type_id           Int
+  allowed_groups             Json                         @db.Json
+  allowed_countries          Json                         @db.Json
+  reward_type_id             Int
+  reward_amount              Decimal                      @default(0) @db.Decimal(5, 2)
+  campaign_start_date        DateTime?                    @db.Timestamp(0)
+  campaign_end_date          DateTime?                    @db.Timestamp(0)
+  is_enabled                 Boolean                      @default(true)
+  created_at                 DateTime?                    @db.Timestamp(0)
+  updated_at                 DateTime?                    @db.Timestamp(0)
+  allowed_consultants        Json?                        @db.Json
+  is_campaign_audience       Boolean                      @default(false)
+  promo_campaign_code_claims promo_campaign_code_claims[]
+  promo_campaign_codes       promo_campaign_codes[]
+}
+
+model role_division_routes {
+  id               Int            @id @default(autoincrement())
+  role_division_id Int
+  route_id         Int
+  permission_id    Int
+  created_at       DateTime?      @db.Timestamp(0)
+  updated_at       DateTime?      @db.Timestamp(0)
+  permissions      permissions    @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "role_division_routes_permission_id_foreign")
+  role_divisions   role_divisions @relation(fields: [role_division_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "role_division_routes_role_division_id_foreign")
+  routes           routes         @relation(fields: [route_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "role_division_routes_route_id_foreign")
+
+  @@index([permission_id], map: "fk_index_role_division_route_permission_id")
+  @@index([role_division_id], map: "fk_index_role_division_route_role_division_id")
+  @@index([route_id], map: "fk_index_role_division_route_route_id")
+}
+
+model role_divisions {
+  id                   Int                    @id @default(autoincrement())
+  role_id              Int
+  division_id          Int
+  parent_id            Int
+  created_at           DateTime?              @db.Timestamp(0)
+  updated_at           DateTime?              @db.Timestamp(0)
+  notifications        notifications[]
+  role_division_routes role_division_routes[]
+  divisions            divisions              @relation(fields: [division_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "role_divisions_division_id_foreign")
+  roles                roles                  @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "role_divisions_role_id_foreign")
+  user_role_divisions  user_role_divisions[]
+  users                users[]
+
+  @@index([division_id], map: "fk_index_role_division_division_id")
+  @@index([role_id], map: "fk_index_role_division_role_id")
+}
+
+model roles {
+  id             Int              @id @default(autoincrement())
+  name           String           @db.VarChar(50)
+  label          String           @db.VarChar(50)
+  created_at     DateTime?        @db.Timestamp(0)
+  updated_at     DateTime?        @db.Timestamp(0)
+  role_divisions role_divisions[]
+}
+
+model routes {
+  id                   Int                    @id @default(autoincrement())
+  name                 String                 @unique(map: "routes_name_unique") @db.VarChar(100)
+  label                String?                @db.VarChar(100)
+  permission_id        Int                    @default(1)
+  remark               String                 @db.VarChar(12)
+  slug                 String                 @unique(map: "routes_slug_unique") @db.VarChar(100)
+  module_name          String?                @db.VarChar(30)
+  uri                  String                 @db.VarChar(100)
+  created_at           DateTime?              @db.Timestamp(0)
+  updated_at           DateTime?              @db.Timestamp(0)
+  role_division_routes role_division_routes[]
+  user_routes          user_routes[]
+}
+
+model site_ivr_numbers {
+  id                     Int                      @id @default(autoincrement())
+  number                 String                   @unique(map: "site_ivr_numbers_number_unique") @db.VarChar(15)
+  is_default             Boolean                  @default(false)
+  type_id                Int                      @db.SmallInt
+  group_id               Int
+  country_id             Int
+  language_id            Int
+  created_at             DateTime?                @db.Timestamp(0)
+  updated_at             DateTime?                @db.Timestamp(0)
+  per_minute_rate        Decimal                  @default(0) @db.Decimal(4, 2)
+  consultant_ivr_numbers consultant_ivr_numbers[]
+  consultant_prs_numbers consultant_prs_numbers[]
+  group_ivr_numbers      group_ivr_numbers[]
+  countries              countries                @relation(fields: [country_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "site_ivr_numbers_country_id_foreign")
+  groups                 groups                   @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "site_ivr_numbers_group_id_foreign")
+  languages              languages                @relation(fields: [language_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "site_ivr_numbers_language_id_foreign")
+  statistics             statistics[]
+
+  @@index([country_id], map: "fk_index_site_ivr_number_country_id")
+  @@index([group_id], map: "fk_index_site_ivr_number_group_id")
+  @@index([language_id], map: "fk_index_site_ivr_number_language_id")
+}
+
+model specializations {
+  id                         Int                          @id @default(autoincrement())
+  specialization             Json                         @db.Json
+  type                       String                       @db.VarChar(20)
+  parent_id                  Int
+  created_at                 DateTime?                    @db.Timestamp(0)
+  updated_at                 DateTime?                    @db.Timestamp(0)
+  consultant_specializations consultant_specializations[]
+}
+
+model statistics {
+  id                                 Int                        @id @default(autoincrement())
+  unique_id                          String                     @db.VarChar(36)
+  dst_number                         String?                    @default("") @db.VarChar(15)
+  type                               Int                        @db.SmallInt
+  type_id                            Int
+  extension                          Int?                       @default(0)
+  provider_id                        Int?                       @default(0)
+  src_number                         String?                    @default("") @db.VarChar(15)
+  start_time                         DateTime                   @db.Timestamp(0)
+  ringing_start_time                 DateTime?                  @db.Timestamp(0)
+  connected_time                     DateTime?                  @db.Timestamp(0)
+  hangup_time                        DateTime?                  @db.Timestamp(0)
+  end_time                           DateTime?                  @db.Timestamp(0)
+  total_duration                     Int?                       @default(0)
+  conversation_duration              Int?                       @default(0)
+  coach_rate                         Decimal                    @default(0) @db.Decimal(9, 5)
+  vat_rate                           Decimal                    @default(0) @db.Decimal(5, 2)
+  allocated_vat_amount               Decimal?                   @default(0) @db.Decimal(9, 5)
+  credit_without_vat                 Decimal?                   @default(0) @db.Decimal(9, 5)
+  credit_before                      Decimal                    @default(0) @db.Decimal(9, 5)
+  credit_after                       Decimal                    @default(0) @db.Decimal(9, 5)
+  consultant_earning_for_minute      Decimal                    @default(0) @db.Decimal(9, 5)
+  consultant_total_earning           Decimal                    @default(0) @db.Decimal(9, 5)
+  surcharge_amount                   Decimal                    @default(0) @db.Decimal(9, 5)
+  status                             String?                    @default("") @db.VarChar(35)
+  customer_currency_code             String?                    @default("") @db.VarChar(4)
+  customer_currency_rate             Decimal?                   @default(0) @db.Decimal(9, 5)
+  coach_currency_code                String?                    @default("") @db.VarChar(4)
+  coach_currency_rate                Decimal?                   @default(0) @db.Decimal(9, 5)
+  company_and_coach_currency_rate    Decimal                    @default(0) @db.Decimal(9, 5)
+  company_and_customer_currency_rate Decimal                    @default(0) @db.Decimal(9, 5)
+  consultant_id                      Int?
+  user_id                            Int?
+  credit_customer_id                 Int?
+  site_ivr_number_id                 Int?
+  chat_channel_id                    BigInt?
+  group_id                           Int?
+  created_at                         DateTime?                  @db.Timestamp(0)
+  updated_at                         DateTime?                  @db.Timestamp(0)
+  chat_messages                      chat_messages[]
+  consultant_tips                    consultant_tips[]
+  credits_customer_reviews           credits_customer_reviews[]
+  credits_refund_details             credits_refund_details[]
+  chat_channels                      chat_channels?             @relation(fields: [chat_channel_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "statistics_chat_channel_id_foreign")
+  consultants                        consultants?               @relation(fields: [consultant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "statistics_consultant_id_foreign")
+  credits_customers                  credits_customers?         @relation(fields: [credit_customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "statistics_credit_customer_id_foreign")
+  groups                             groups?                    @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "statistics_group_id_foreign")
+  site_ivr_numbers                   site_ivr_numbers?          @relation(fields: [site_ivr_number_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "statistics_site_ivr_number_id_foreign")
+  users                              users?                     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "statistics_user_id_foreign")
+  technical_issues                   technical_issues[]
+  tracings                           tracings[]
+
+  @@index([chat_channel_id], map: "fk_index_statistics_chat_channel_id")
+  @@index([consultant_id], map: "fk_index_statistics_consultant_id")
+  @@index([credit_customer_id], map: "fk_index_statistics_credit_customer_id")
+  @@index([group_id], map: "fk_index_statistics_group_id")
+  @@index([site_ivr_number_id], map: "fk_index_statistics_site_ivr_number_id")
+  @@index([user_id], map: "fk_index_statistics_user_id")
+}
+
+model subscribers {
+  id         Int       @id @default(autoincrement())
+  email      String    @db.VarChar(254)
+  ip         String    @db.VarChar(15)
+  country_id Int
+  token      String    @db.VarChar(32)
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+  countries  countries @relation(fields: [country_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "subscribers_country_id_foreign")
+
+  @@index([country_id], map: "fk_index_subscribers_country_id")
+}
+
+model subscribers_pre_release {
+  id         Int       @id @default(autoincrement())
+  email      String    @db.VarChar(254)
+  ip         String    @db.VarChar(50)
+  country_id Int
+  group_id   Int
+  token      String    @db.VarChar(32)
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+  countries  countries @relation(fields: [country_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "subscribers_pre_release_country_id_foreign")
+
+  @@index([country_id], map: "fk_index_pr_subscribers_country_id")
+}
+
+model technical_issues {
+  id                 Int               @id @default(autoincrement())
+  problem            String            @db.VarChar(500)
+  group_id           Int
+  statistics_id      Int
+  credit_customer_id Int
+  created_at         DateTime?         @db.Timestamp(0)
+  updated_at         DateTime?         @db.Timestamp(0)
+  credits_customers  credits_customers @relation(fields: [credit_customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "technical_issues_credit_customer_id_foreign")
+  groups             groups            @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "technical_issues_group_id_foreign")
+  statistics         statistics        @relation(fields: [statistics_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "technical_issues_statistics_id_foreign")
+
+  @@index([credit_customer_id], map: "fk_index_technical_issues_credit_customer_id")
+  @@index([group_id], map: "fk_index_technical_issues_group_id")
+  @@index([statistics_id], map: "fk_index_technical_issues_statistics_id")
+}
+
+model tracings {
+  id            Int        @id @default(autoincrement())
+  statistics_id Int
+  timestamp     DateTime   @db.Timestamp(0)
+  info          String?    @db.VarChar(80)
+  credit_before Decimal    @db.Decimal(9, 5)
+  credit_after  Decimal    @db.Decimal(9, 5)
+  status        Int?
+  created_at    DateTime?  @db.Timestamp(0)
+  updated_at    DateTime?  @db.Timestamp(0)
+  statistics    statistics @relation(fields: [statistics_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tracings_statistics_id_foreign")
+
+  @@index([statistics_id], map: "fk_index_tracings_statistics_id")
+}
+
+model used_promo_campaign_codes {
+  id                  Int       @id @default(autoincrement())
+  promo_campaign_code String    @db.VarChar(8)
+  source              String    @db.VarChar(10)
+  status              String    @db.VarChar(10)
+  user_id             Int
+  created_at          DateTime? @db.Timestamp(0)
+  updated_at          DateTime? @db.Timestamp(0)
+  users               users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "used_promo_campaign_codes_user_id_foreign")
+
+  @@index([user_id], map: "fk_index_used_promo_campaign_codes_user_id")
+}
+
+model user_bank_accounts {
+  id                   Int       @id @default(autoincrement())
+  account_name         String    @db.VarChar(50)
+  currency_code        String    @db.VarChar(5)
+  bank_name            String?   @db.VarChar(100)
+  account_number       String    @db.VarChar(50)
+  account_type         String    @db.VarChar(10)
+  swift_code           String?   @db.VarChar(12)
+  bank_address         String?   @db.VarChar(300)
+  bank_city            String?   @db.VarChar(35)
+  bank_zip_code        String?   @db.VarChar(10)
+  recipient_account_id Int
+  country_id           Int
+  is_active            Boolean   @default(true)
+  user_id              Int
+  created_at           DateTime? @db.Timestamp(0)
+  updated_at           DateTime? @db.Timestamp(0)
+  countries            countries @relation(fields: [country_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_bank_accounts_country_id_foreign")
+  users                users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_bank_accounts_user_id_foreign")
+
+  @@unique([account_number, user_id], map: "user_bank_accounts_account_number_user_id_unique")
+  @@index([country_id], map: "fk_index_user_bank_account_country_id")
+  @@index([user_id], map: "fk_index_user_bank_account_user_id")
+}
+
+model user_campaign_invitees {
+  id               BigInt         @id @default(autoincrement())
+  user_email       String         @db.VarChar(254)
+  user_campaign_id BigInt
+  opened_at        DateTime?      @db.Timestamp(0)
+  claimed_at       DateTime?      @db.Timestamp(0)
+  is_deleted       Boolean        @default(false)
+  created_at       DateTime?      @db.Timestamp(0)
+  updated_at       DateTime?      @db.Timestamp(0)
+  user_campaigns   user_campaigns @relation(fields: [user_campaign_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_campaign_invitees_user_campaign_id_foreign")
+
+  @@index([user_campaign_id], map: "fk_index_user_campaign_invitees_user_campaign_id")
+}
+
+model user_campaigns {
+  id                     BigInt                   @id @default(autoincrement())
+  campaign_name          String                   @db.VarChar(200)
+  campaign_amount        Decimal                  @default(0) @db.Decimal(6, 2)
+  language_id            Int
+  is_deleted             Boolean                  @default(false)
+  created_at             DateTime?                @db.Timestamp(0)
+  updated_at             DateTime?                @db.Timestamp(0)
+  user_campaign_invitees user_campaign_invitees[]
+  languages              languages                @relation(fields: [language_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_campaigns_language_id_foreign")
+
+  @@unique([campaign_name, language_id, is_deleted], map: "user_campaigns_campaign_name_language_id_is_deleted_unique")
+  @@index([language_id], map: "fk_index_user_campaigns_language_id")
+}
+
+model user_divisions {
+  id          Int       @id @default(autoincrement())
+  user_id     Int
+  division_id Int
+  user_type   String    @db.VarChar(20)
+  created_at  DateTime? @db.Timestamp(0)
+  updated_at  DateTime? @db.Timestamp(0)
+  divisions   divisions @relation(fields: [division_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_divisions_division_id_foreign")
+  users       users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_divisions_user_id_foreign")
+
+  @@index([division_id], map: "fk_index_user_divisions_division_id")
+  @@index([user_id], map: "fk_index_user_divisions_user_id")
+}
+
+model user_role_divisions {
+  id               Int            @id @default(autoincrement())
+  user_id          Int
+  role_division_id Int
+  created_at       DateTime?      @db.Timestamp(0)
+  updated_at       DateTime?      @db.Timestamp(0)
+  role_divisions   role_divisions @relation(fields: [role_division_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_role_divisions_role_division_id_foreign")
+  users            users          @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_role_divisions_user_id_foreign")
+
+  @@index([role_division_id], map: "fk_index_user_role_division_division_id")
+  @@index([user_id], map: "fk_index_user_role_division_user_id")
+}
+
+model user_routes {
+  id            Int         @id @default(autoincrement())
+  user_id       Int
+  route_id      Int
+  permission_id Int
+  created_at    DateTime?   @db.Timestamp(0)
+  updated_at    DateTime?   @db.Timestamp(0)
+  permissions   permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_routes_permission_id_foreign")
+  routes        routes      @relation(fields: [route_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_routes_route_id_foreign")
+  users         users       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_routes_user_id_foreign")
+
+  @@index([permission_id], map: "fk_index_user_route_permission_id")
+  @@index([route_id], map: "fk_index_user_route_route_id")
+  @@index([user_id], map: "fk_index_user_route_user_id")
+}
+
+model users {
+  id                                                                       Int                               @id @default(autoincrement())
+  first_name                                                               String?                           @db.VarChar(35)
+  last_name                                                                String?                           @db.VarChar(35)
+  email                                                                    String                            @db.VarChar(254)
+  password                                                                 String                            @db.VarChar(128)
+  group_id                                                                 Int
+  token                                                                    String?                           @db.VarChar(100)
+  status                                                                   Int                               @default(0) @db.SmallInt
+  default_role_division_id                                                 Int?
+  is_logged                                                                Boolean                           @default(false)
+  remember_token                                                           String?                           @db.VarChar(100)
+  is_deleted                                                               Boolean                           @default(false)
+  provider                                                                 String?                           @db.VarChar(255)
+  provider_id                                                              String?                           @db.VarChar(255)
+  deleted_at                                                               DateTime?                         @db.Timestamp(0)
+  created_at                                                               DateTime?                         @db.Timestamp(0)
+  updated_at                                                               DateTime?                         @db.Timestamp(0)
+  user_token                                                               String?
+  email_verified_at                                                        DateTime?                         @db.Timestamp(6)
+  ip                                                                       String?                           @db.VarChar(100)
+  affiliates                                                               affiliates[]
+  chat_blocked_channels                                                    chat_blocked_channels[]
+  chat_channels                                                            chat_channels[]
+  chat_messages_chat_messages_message_fromTousers                          chat_messages[]                   @relation("chat_messages_message_fromTousers")
+  chat_messages_chat_messages_message_toTousers                            chat_messages[]                   @relation("chat_messages_message_toTousers")
+  chat_uuids                                                               chat_uuids[]
+  consultant_gallery                                                       consultant_gallery[]
+  consultants                                                              consultants[]
+  credits_customer_reviews_credits_customer_reviews_created_user_idTousers credits_customer_reviews[]        @relation("credits_customer_reviews_created_user_idTousers")
+  credits_customer_reviews_credits_customer_reviews_flagged_user_idTousers credits_customer_reviews[]        @relation("credits_customer_reviews_flagged_user_idTousers")
+  credits_customer_viewed_coaches                                          credits_customer_viewed_coaches[]
+  credits_customers                                                        credits_customers[]
+  credits_transactions                                                     credits_transactions[]
+  favorite_consultants                                                     favorite_consultants[]
+  ivr_known_users                                                          ivr_known_users[]
+  media_storages                                                           media_storages[]
+  notifications_notifications_dst_user_idTousers                           notifications[]                   @relation("notifications_dst_user_idTousers")
+  notifications_notifications_src_user_idTousers                           notifications[]                   @relation("notifications_src_user_idTousers")
+  password_reveals_password_reveals_account_owner_user_idTousers           password_reveals[]                @relation("password_reveals_account_owner_user_idTousers")
+  password_reveals_password_reveals_revealed_user_idTousers                password_reveals[]                @relation("password_reveals_revealed_user_idTousers")
+  passwords_resets                                                         passwords_resets[]
+  promo_campaign_code_claims                                               promo_campaign_code_claims[]
+  promo_campaign_codes                                                     promo_campaign_codes[]
+  statistics                                                               statistics[]
+  used_promo_campaign_codes                                                used_promo_campaign_codes[]
+  user_bank_accounts                                                       user_bank_accounts[]
+  user_divisions                                                           user_divisions[]
+  user_role_divisions                                                      user_role_divisions[]
+  user_routes                                                              user_routes[]
+  role_divisions                                                           role_divisions?                   @relation(fields: [default_role_division_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "users_default_role_division_id_foreign")
+  groups                                                                   groups                            @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "users_group_id_foreign")
+  users_authentications                                                    users_authentications[]
+
+  @@unique([email, group_id], map: "users_email_group_id_unique")
+  @@index([default_role_division_id], map: "fk_index_user_default_role_id")
+  @@index([group_id], map: "fk_index_user_group_id")
+}
+
+model users_authentications {
+  id              Int       @id @default(autoincrement())
+  ip              String    @db.VarChar(50)
+  email           String    @db.VarChar(254)
+  user_agent_info String
+  site            String    @db.VarChar(15)
+  user_id         Int
+  status          Int       @default(1) @db.SmallInt
+  created_at      DateTime? @db.Timestamp(0)
+  updated_at      DateTime? @db.Timestamp(0)
+  users           users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "users_authentications_user_id_foreign")
+
+  @@index([user_id], map: "fk_index_user_login_user_id")
+}
+
+model users_invalid_login_attempts {
+  id              Int       @id @default(autoincrement())
+  ip              String    @db.VarChar(15)
+  site            String    @db.VarChar(15)
+  email           String    @db.VarChar(254)
+  user_agent_info String
+  created_at      DateTime? @db.Timestamp(0)
+  updated_at      DateTime? @db.Timestamp(0)
+}
